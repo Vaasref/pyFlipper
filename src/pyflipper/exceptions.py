@@ -7,10 +7,10 @@ class SerialException(Exception):
 class FlipperException(Exception):
     pass
 
-class FlipperErrorException(Exception):
+class FlipperError(FlipperException):
     """Raised when Flipper returns an error message"""
     pass
 
-class FlipperTimeoutException(FlipperException):
+class FlipperTimeout(FlipperException):
     """Raised when Flipper does not respond in time"""
     pass

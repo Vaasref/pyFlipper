@@ -5,7 +5,7 @@ import websocket
 import socket
 from logging import Logger, getLogger
 
-from pyflipper.exceptions import SerialException, FlipperErrorException, FlipperTimeoutException
+from pyflipper.exceptions import SerialException, FlipperError, FlipperTimeout
 
 class SerialWrapper:
     """Abstract class for serial communication"""
@@ -41,7 +41,7 @@ class SerialWrapper:
             error = self._error_check(received)
             if error:
                 self.serial_log.error(error)
-                raise FlipperErrorException(error)
+                raise FlipperError(error)
         except SerialException as e:
             self.serial_log.error(e.args[0])
             raise e
@@ -82,7 +82,7 @@ class LocalSerial(SerialWrapper):
             try:
                 return func(self, *args, **kwargs)
             except serial.SerialTimeoutException as e:
-                raise FlipperTimeoutException("Operation timed out") from e
+                raise FlipperTimeout("Operation timed out") from e
             except serial.serialutil.SerialException as e:
                 raise SerialException("Connection to Flipper Zero lost") from e
         return wrapper
@@ -131,7 +131,7 @@ class WSSerial(SerialWrapper):
             try:
                 return func(self, *args, **kwargs)
             except socket.timeout as e:
-                raise FlipperTimeoutException("Operation timed out") from e
+                raise FlipperTimeout("Operation timed out") from e
             except websocket.WebSocketException as e:
                 raise SerialException("Communication error") from e
         return wrapper
