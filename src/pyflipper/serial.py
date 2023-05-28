@@ -165,16 +165,27 @@ class WSSerial(SerialWrapper):
 import inspect
 
 class SerialFunction:
+    """This class serves as a base class for all serial functions.
+    It is used to get a reference to PyFlipper and its SerialWrapper object without passing it as an argument to every function classes."""
+
     _serial_wrapper:SerialWrapper = None
 
     def __init__(self, flipper=None) -> None:
         if not flipper: # if flipper is not passed, try to get it from caller's frame
-            caller_frame = inspect.currentframe().f_back
-            caller_locals = caller_frame.f_locals
-            flipper = caller_locals.get('self')
-            pyflipper_class = caller_locals.get('PyFlipper')
-            if not flipper and pyflipper_class and not isinstance(flipper, pyflipper_class):
-                raise Exception("SerialFunction must be initialized with flipper object or called from PyFlipper object")
+            frame = inspect.currentframe()
+            while frame:
+                caller_frame = frame.f_back
+                caller_locals = caller_frame.f_locals
+                caller = caller_locals.get('self')
+                caller_class = caller.__class__
+
+                if isinstance(caller, SerialFunction): # serves for both super.__init__() calls as well as nested serial functions
+                    frame = caller_frame
+                elif caller_class.__name__ == "PyFlipper":
+                    flipper = caller
+                    break
+                else:
+                    raise Exception("Classes extending SerialFunction must be initialized from PyFlipper object or with a PyFlipper instance passed as argument")
 
         self._flipper = flipper
         self._serial_wrapper = flipper._serial_wrapper

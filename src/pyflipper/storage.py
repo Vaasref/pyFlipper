@@ -27,9 +27,9 @@ class Storage(SerialFunction):
             self._send(text)
             self._stop()
 
-    def __init__(self, flipper) -> None:
+    def __init__(self, flipper=None) -> None:
         super().__init__(flipper)
-        self.write = __class__.Write(flipper)
+        self.write = Storage.Write()
 
     def info(self, fs: str) -> dict:
         assert fs in ('/ext', '/int'), "Storage filesystem must be '/ext' or '/int'"
