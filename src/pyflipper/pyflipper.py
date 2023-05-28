@@ -27,30 +27,34 @@ from pyflipper.gpio import Gpio
 from pyflipper.loader import Loader
 from pyflipper.power import Power
 from pyflipper.update import Update
-from pyflipper.exceptions import SerialException
+from pyflipper.exceptions import SerialException, NoFlipperFound
 
 class PyFlipper:
+    """
+    Main class for interacting with Flipper Zero device
+    
+    Args:
+        com (str, optional): COM port to connect to
+        ws (str, optional): Websocket address to connect to
+        name (str, optional): Name of the (local) Flipper Zero device to connect to
+        wrapper (SerialWrapper, optional): SerialWrapper class to use for connection
+        pick_first (str, optional)(default: 'ready'): If no COM port or websocket address or name is specified, pick the first available device. If set to 'ready', only pick the first device that is ready to use otherwise it will pick the first
+    
+    Raises:
+        TypeError: If wrapper is not subclass of SerialWrapper
+        Exception: If no Flipper Zero devices are found
+    """
     _serial_wrapper:SerialWrapper = None
     _info:dict = {}
     info = MappingProxyType(_info)
     name = None
 
     def __init__(self, **kwargs) -> None:
-        """
-        Initialize the class.
-
-        This method initializes the class. It takes two arguments, a dictionary
-        and a string. The dictionary contains the data that the class will use
-        to initialize itself, and the string is the name of the class.
-
-        :param kwargs: A dictionary of data to use to initialize the class.
-        :param name: The name of the class.
-        :return: None
-        """
-
-    def __init__(self, **kwargs) -> None:
         if 'pick_first' not in kwargs:
             kwargs['pick_first'] = "ready"
+
+        if "wrapper" in kwargs and not isinstance(kwargs['wrapper'], SerialWrapper):
+            raise TypeError("wrapper must be subclass of SerialWrapper")
 
         if kwargs.get('com'):
             debug("COM port specified, connecting to Flipper Zero")
@@ -93,10 +97,23 @@ class PyFlipper:
         self.device_info.pull(True)
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """
+        Name of the Flipper Zero device (read-only)
+        """
         return self.info.get('name')
 
+    @property
+    def info(self) -> dict: # property not strictly necessary, but allows for documentation
+        """
+        Device info (read-only)
+        """
+        return self._info
+
     def close(self):
+        """
+        Close connection to Flipper Zero
+        """
         self._serial_wrapper.close()
 
     def _open_serial(self, wrapper_class, port,):
@@ -121,9 +138,9 @@ class PyFlipper:
                 pass
         debug(f"Found {len(flipper_ports)} Flipper Zero devices")
         if len(flipper_ports) == 0:
-            raise Exception("No Flipper Zero devices found, please specify COM port or websocket address")
+            raise NoFlipperFound("No Flipper Zero devices found, please specify COM port or websocket address")
         elif len(flipper_ports) > 1 and not kwargs.get('pick_first'):
-            raise Exception("Multiple Flipper Zero devices found, please specify COM port or websocket address")
+            raise NoFlipperFound("Multiple Flipper Zero devices found, please specify COM port or websocket address")
         else:
             if kwargs.get('pick_first') == 'ready':
                 index = 0
@@ -135,7 +152,7 @@ class PyFlipper:
                         debug(f"Failed to connect to {flipper_ports[index]}")
                         index += 1
                         if index == len(flipper_ports):
-                            raise Exception("No available Flipper Zero devices found, please specify COM port or websocket address")
+                            raise NoFlipperFound("No available Flipper Zero devices found, please specify COM port or websocket address")
                     else:
                         debug(f"Connected to {flipper_ports[index]}")
                         break

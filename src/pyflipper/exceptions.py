@@ -2,6 +2,10 @@ class SerialException(Exception):
     """Absctraction for all serial exceptions"""
     pass
 
+class NoFlipperFound(SerialException):
+    """Raised when no Flipper Zero is found"""
+    pass
+
 
 
 class FlipperException(Exception):
