@@ -61,11 +61,13 @@ class Storage(SerialFunction):
     def remove(self, file: str) -> None:
         self._serial_wrapper.send(f"storage remove {file}")
 
-    def read(self, file: str) -> str:
-        try:
-            return self._serial_wrapper.send(f"storage read {file}").split('\r\n')[1]
-        except IndexError:
-            return ""
+    def read(self, file: str) -> bytes:
+        size = self._serial_wrapper.send(f"storage read {file}", read_until='\r\n')
+        size = int(size.removeprefix("Size: "))
+        if size > 0:
+            return self._serial_wrapper.read(size)
+        else:
+            return b''
             
     def copy(self, src: str, dest: str) -> None:
         self._serial_wrapper.send(f"storage copy {src} {dest}")
