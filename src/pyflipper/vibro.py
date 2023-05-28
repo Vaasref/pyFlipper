@@ -1,7 +1,6 @@
-class Vibro:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-        
+from pyflipper.serial import SerialFunction
+
+class Vibro(SerialFunction):
     def set(self, is_on: bool) -> None:
         assert isinstance(is_on, bool), \
             "is_on must be boolean (True or False)."

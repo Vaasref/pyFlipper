@@ -1,8 +1,6 @@
+from pyflipper.serial import SerialFunction
 
-class Led:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-    
+class Led(SerialFunction):
     def set(self, led: str, value: int):
         assert 0 <= value <= 255, "Value must be in 0-255 range."
         assert led in ("r", "b", "g", "bl"), \

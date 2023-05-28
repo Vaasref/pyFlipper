@@ -1,13 +1,10 @@
-from .threaded import Threaded
-from .utils import is_hexstring
+from pyflipper.threaded import Threaded
+from pyflipper.utils import is_hexstring
 
 class Ir(Threaded):
     # TODO: auto parse available protocols from >: ir help
     PROTOCOLS = ["NEC", "NEC42", "NEC42ext", "Samsung32",
                  "RC6", "RC5", "RC5X", "SIRC", "SIRC15", "SIRC20"]
-
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
 
     def tx(self, protocol: str, hex_address: str, hex_command: str) -> None:
         assert protocol in self.PROTOCOLS, f"Available protocols: {self.PROTOCOLS}"
@@ -24,7 +21,7 @@ class Ir(Threaded):
             data = self._serial_wrapper.send("ir rx")
             # TODO parse data
             return data
-        self.exec(func=None, timeout=timeout)
+        self._set_watchdog(timeout)
         return _run()
 
     def tx_raw(self, frequency:int , duty_cycle: float, samples: list or str) -> None:

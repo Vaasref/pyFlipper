@@ -1,8 +1,6 @@
+from pyflipper.serial import SerialFunction
 
-class Loader:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-    
+class Loader(SerialFunction):
     def list(self) -> dict:
         response = self._serial_wrapper.send("loader list")
         result = {}

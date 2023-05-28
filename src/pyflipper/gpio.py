@@ -1,8 +1,6 @@
+from pyflipper.serial import SerialFunction
 
-class Gpio:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-    
+class Gpio(SerialFunction):
     def mode(self, pin_name: str, value: int) -> None:
         #Set gpio mode: 0 - input, 1 - output
         self._serial_wrapper.send(f"gpio mode {pin_name} {value}")

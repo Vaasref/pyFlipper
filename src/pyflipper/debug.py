@@ -1,7 +1,6 @@
-class Debug:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
+from pyflipper.serial import SerialFunction
 
+class Debug(SerialFunction):
     def on(self) -> None:
         self._serial_wrapper.send("debug 1")
 

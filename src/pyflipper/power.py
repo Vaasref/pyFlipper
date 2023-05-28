@@ -1,9 +1,8 @@
 import re
 
-class Power:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-    
+from pyflipper.serial import SerialFunction
+
+class Power(SerialFunction):
     def off(self) -> None:
         return self._serial_wrapper.send("power off")
 

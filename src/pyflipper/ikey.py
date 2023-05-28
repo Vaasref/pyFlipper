@@ -1,11 +1,8 @@
-from .utils import is_hexstring
-from .threaded import Threaded
+from pyflipper.utils import is_hexstring
+from pyflipper.threaded import Threaded
 
 class Ikey(Threaded):
     KEY_TYPES_TO_KEY_DATA_LENGHT = {"Dallas": 8, "Cyfral": 2, "Metakom": 4}
-
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
     
     def _validations(self, key_type, key_data):
         key_types = list(self.KEY_TYPES_TO_KEY_DATA_LENGHT.keys())
@@ -18,7 +15,7 @@ class Ikey(Threaded):
             data = self._serial_wrapper.send(f"ikey read")
             #TODO: Parse data
             return data
-        self.exec(func=None, timeout=timeout)
+        self._set_watchdog(timeout)
         return _run()
 
     def write(self, key_type: str, key_data: str, timeout: int = 5) -> str:
@@ -27,10 +24,10 @@ class Ikey(Threaded):
             data = self._serial_wrapper.send(f"ikey write {key_type} {key_data}")
             #TODO: Parse data
             return data
-        self.exec(func=None, timeout=timeout)
+        self._set_watchdog(timeout)
         return _run()
 
     def emulate(self, key_type: str, key_data: str, timeout: int = 5) -> None:
         self._validations(key_type=key_type, key_data=key_data)
-        self.exec(func=None, timeout=timeout)
+        self._set_watchdog(timeout)
         self._serial_wrapper.send(f"ikey emulate {key_type} {key_data}")

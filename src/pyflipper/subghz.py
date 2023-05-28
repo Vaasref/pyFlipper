@@ -1,9 +1,6 @@
-from .threaded import Threaded
+from pyflipper.threaded import Threaded
 
 class Subghz(Threaded):
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-        
     def tx(self, hex_key: str, frequency: int = 433920000, te: int = 403, count: int = 10):
         # TODO: params assertion and check if default frequency is allowed worldwide
         return self._serial_wrapper.send(f"subghz tx {hex_key} {frequency} {te} {count}")
@@ -15,7 +12,7 @@ class Subghz(Threaded):
             data = self._serial_wrapper.send(f"subghz {cmd} {frequency}")
             #TODO: Parse data
             return data
-        self.exec(func=None, timeout=timeout)
+        self._set_watchdog(timeout)
         return _run()
 
     def decode_raw(self, sub_file: str) -> str:

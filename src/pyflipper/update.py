@@ -1,7 +1,6 @@
-class Update:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-    
+from pyflipper.serial import SerialFunction
+
+class Update(SerialFunction):
     def install(self, fuf_file: str) -> None:
         assert fuf_file.endswith('.fuf')
         return self._serial_wrapper.send(f"update install {fuf_file}")

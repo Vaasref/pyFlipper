@@ -1,36 +1,35 @@
 import re
 import time
 
-from .threaded import Threaded
-
+from pyflipper.threaded import Threaded
+from pyflipper.serial import SerialFunction
 
 # TODO: Leverage pathlib to validate and manage file paths
 
-
-class Storage:
+class Storage(SerialFunction):
     class Write(Threaded):
-        def __init__(self, serial_wrapper) -> None:
-            self._serial_wrapper = serial_wrapper
-
-        def start(self, file: str) -> None:
+        def _start(self, file: str) -> None:
             def _run():
                 self._serial_wrapper.send(f"storage write {file}")
-            self.exec(func=_run, timeout=None)
+            self._exec(func=_run)
 
-        def send(self, text: str) -> None:
-            if self.thread.is_alive():
+        def _send(self, text: str) -> None:
+            if self._exec_thread.is_alive():
                 #replace carriage return with ctrl+Enter
                 self._serial_wrapper.write(text.replace('\r\n', '\x0d').encode())
                 time.sleep(0.5)
         
-        def file(self, text: str, path: str) -> None:
-            self.start(path)
-            self.send(text)
-            self.stop()
+        def _check_path(self, path: str) -> None:
+            pass
 
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
-        self.write = __class__.Write(serial_wrapper=serial_wrapper)
+        def file(self, text: str, path: str) -> None:
+            self._start(path)
+            self._send(text)
+            self._stop()
+
+    def __init__(self, flipper) -> None:
+        super().__init__(flipper)
+        self.write = __class__.Write(flipper)
 
     def info(self, fs: str) -> dict:
         assert fs in ('/ext', '/int'), "Storage filesystem must be '/ext' or '/int'"
@@ -81,6 +80,8 @@ class Storage:
         return self._serial_wrapper.send(f"storage md5 {file}")
 
     def stat(self, file: str) -> str:
+        ret = self._serial_wrapper.send(f"storage stat {file}")
+
         return self._serial_wrapper.send(f"storage stat {file}")
 
 

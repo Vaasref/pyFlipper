@@ -1,9 +1,8 @@
 import re
 
-class Ps:
-    def __init__(self, serial_wrapper) -> None:
-        self._serial_wrapper = serial_wrapper
+from pyflipper.serial import SerialFunction
 
+class Ps(SerialFunction):
     def list(self) -> list:
         pattern = re.compile(
             '(\w+)\s+(0[xX][0-9a-fA-F]+)\s+(\S+)\s+(\d+)\s+(\d+)')
