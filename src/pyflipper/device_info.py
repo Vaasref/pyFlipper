@@ -1,9 +1,23 @@
 import re
 
 from pyflipper.serial import SerialFunction
+from pyflipper.exceptions import FlipperException
 
 class DeviceInfo(SerialFunction):
     def pull(self, update_flipper_instance:bool=True) -> dict:
+        """
+        Pulls device info from Flipper Zero
+
+        Args:
+            update_flipper_instance (bool, optional)(default: True): If True, updates the PyFlipper instance with the pulled info.
+
+        Raises:
+            FlipperException: If couldn't load device info
+        
+        Returns:
+            dict: Device info
+        
+        """ 
         pattern = re.compile("([\w|_]+)\s+:\s([\w|\d]+)")
         value = {}
 
@@ -16,6 +30,8 @@ class DeviceInfo(SerialFunction):
 
             else:
                 value[x[0]] = x[1]
+        if len(value) == 0:
+            raise FlipperException("Couldn't load device info")
         if update_flipper_instance:
             self._flipper._info = value.copy()
         return value
