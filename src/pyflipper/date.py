@@ -5,10 +5,8 @@ class Date:
         self._serial_wrapper = serial_wrapper
 
     def date(self) -> datetime:
-        result = self._serial_wrapper.send("date")[:-4]
-        #FIXME: Flipper returns isoweekday 1-7 but %w is 0-6
-        result = f"{result[:-1]}{int(result[-1])-1}"
-        return datetime.strptime(result, "%Y-%m-%d %H:%M:%S %w")
+        datetime_str = self._serial_wrapper.send("date")[0:18] # only date and time are needed
+        return datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
 
     def timestamp(self) -> float:
         return self.date().timestamp()
