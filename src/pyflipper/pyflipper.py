@@ -1,6 +1,6 @@
 from logging import debug
 from types import MappingProxyType
-import serial
+import serial.tools.list_ports
 
 from pyflipper.bt import Bt
 from pyflipper.debug import Debug
