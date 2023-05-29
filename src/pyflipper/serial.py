@@ -55,7 +55,7 @@ class SerialWrapper:
         """
         payload = f"{payload}\r".encode() # not sending \n because it would be added in case of writing a file
         read_until = read_until.encode()
-        self.serial_log.info(f"Sending: '{payload}'")
+        self.serial_log.info(f"Sending: {payload}")
         try:
             received = self._send(payload, read_until)
             error = self._error_check(received)
@@ -66,7 +66,11 @@ class SerialWrapper:
             self.serial_log.error(e.args[0])
             raise e
         else:
-            self.serial_log.debug(f"Received: '{received}'")
+            display = repr(received)
+            if display.count("\\n") > 1: # display as multiline string if there are multiple \n
+                display = display.replace("\\n", "\\n\n")
+                display = "\n\"\"\"\n{0}\n\"\"\"".format(display[1:-1]) 
+            self.serial_log.debug(f"Received: {display}")
         return received
     
     def write(self, msg:bytes):
