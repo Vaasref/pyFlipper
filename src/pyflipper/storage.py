@@ -257,12 +257,13 @@ class FlipperPath(PureFlipperPath):
 
 
 class File(SerialFunction):
-    def read(self, path:FlipperPath) -> dict:
+    def read(self, path:FlipperPath, check_md5:bool=True) -> dict:
         """
         Read file from Flipper Zero
 
         Args:
             path(FlipperPath): File path
+            check_md5 (bool, optional)(default: True): If True, check MD5 checksum
 
         Returns:
             dict: File stats and data
@@ -273,15 +274,22 @@ class File(SerialFunction):
             StoragePathFree: If path doesn't exist
         """
         output = {}
-        path = FlipperPath(self._flipper, path)
-        if path.exists():
+        if isinstance(path, str) or isinstance(path, PureFlipperPath):
+            path = FlipperPath(self._flipper, path)
+        if path.is_not_free():
             if path.is_file():
-                output = path.stat
+                output = {}
+                if check_md5:
+                    output = path.stat
+                else:
+                    output['path'] = str(path)
+                    output['type'] = 'file'
                 output['data'] = self._flipper.storage.read(path)
                 output['size'] = len(output['data']) # override stat size with actual data size
-                md5_checksum = hashlib.md5(output['data']).hexdigest()
-                if md5_checksum != output['md5']:
-                    raise FlipperException(f"MD5 checksum mismatch for file {path} (expected: {output['md5']}, got: {md5_checksum})", output)
+                if check_md5:
+                    md5_checksum = hashlib.md5(output['data']).hexdigest()
+                    if md5_checksum != output['md5']:
+                        raise FlipperException(f"MD5 checksum mismatch for file {path} (expected: {output['md5']}, got: {md5_checksum})", output)
             else:
                 raise StoragePathNotFile(f"Path {path} is not a file")
         else:
@@ -289,12 +297,12 @@ class File(SerialFunction):
         return output
 
 
-    def write(self, path:str, data:bytes, overwrite:bool=True, create_parents:bool=False) -> None:
+    def write(self, path:FlipperPath, data:bytes, overwrite:bool=True, create_parents:bool=False) -> None:
         """
         Write file to Flipper Zero
 
         Args:
-            path (str): File path
+            path (FlipperPath): File path
             data (bytes): File data
             overwrite (bool, optional)(default: True): If True, overwrite file if it already exists
             create_parents (bool, optional)(default: False): If True, create parent directories if they don't exist
@@ -304,7 +312,8 @@ class File(SerialFunction):
             StoragePathNotFree: If path already exists and overwrite is False
             StoragePathInvalid: If path is invalid, either directly or because of its parent
         """
-        path = FlipperPath(self._flipper, path)
+        if isinstance(path, str) or isinstance(path, PureFlipperPath):
+            path = FlipperPath(self._flipper, path)
         if path.exists():
             if path.is_file():
                 if not overwrite:
@@ -430,6 +439,7 @@ class Storage(SerialFunction):
 
         Args:
             path (str): File, directory or storage path
+            extended (bool, optional)(default: True): If True, returns extended stats (send additional commands to Flipper)
 
         Returns:
             dict: File, directory or storage stats
@@ -494,126 +504,3 @@ class Storage(SerialFunction):
             else:
                 raise FlipperException(e.args[0])
         return received
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def strict_typing(func):
-#     def _strict_typing(*args, **kwargs):
-#         for i, arg in enumerate(args):
-#             if not isinstance(arg, func.__annotations__[func.__code__.co_varnames[i]]):
-#                 raise TypeError(f"Argument {func.__code__.co_varnames[i]} must be of type {func.__annotations__[func.__code__.co_varnames[i]]}")
-#         for k, v in kwargs.items():
-#             if not isinstance(v, func.__annotations__[k]):
-#                 raise TypeError(f"Argument {k} must be of type {func.__annotations__[k]}")
-#         return func(*args, **kwargs)
-#     return _strict_typing
-
-
-# class Dir(SerialFunction):
-#     def _check_path_to_dir(self, path):
-#         try:
-#             self.exists(path, True)
-#         except (StoragePathFree, StoragePathNotDir):
-#             raise
-#         return 
-    
-#     def _check_path_to_nothing(self, path):
-#         try:
-#             args = list(args)
-#             args[0] = PureFlipperPath(args[0])
-#             if len(args[0].parts) == 1:
-#                 raise StoragePathInvalid('Path cannot be root ("/ext" or "/int")')
-#             self.exists(args[0], True)
-#         except StoragePathFree:
-#             return True
-#         except StoragePathNotDir:
-#             raise
-#         else:
-#             raise StoragePathNotFree(f"Path {args[0]} already exists")
-#         return False
-    
-
-
-#     @strict_typing
-#     def exists(self, path:PureFlipperPath, raise_exception:bool=False):
-#         path = PureFlipperPath(path)
-#         try:
-#             stats = self._flipper.storage.stat(path)
-#             if stats['type'] != 'dir' and raise_exception:
-#                 raise StoragePathNotDir(f"Path {path} is not a directory")
-#         except FlipperError as e:
-#             if not e.args[0].startswith("Storage error: invalid name/path"):
-#                 if raise_exception:
-#                     raise StoragePathFree(f"Path {path} doesn't exist")
-#             else: # unrelated FlipperError
-#                 raise e
-#         else:
-#             return True
-#         return False
-
-
-
-#     @strict_typing
-#     def create(self, path:PureFlipperPath, raise_exists_exception:bool=False, something:bool=False):
-#         if len(path.parts) == 1:
-#             raise StoragePathInvalid('Path cannot be root ("/ext" or "/int")')
-#         self._flipper.storage.mkdir(path)
-        
-    
-
-#     @strict_typing
-#     def list(self, path:PureFlipperPath, recursive:bool=False):
-#         if recursive:
-#             return self._flipper.storage.tree(path)
-#         else:
-#             return self._flipper.storage.list(path)
-
-
-#     @strict_typing
-#     def remove(self, path:PureFlipperPath, recursive:bool=False, remove_contents:bool=False):
-#         tree = self._flipper.storage._explorer('tree', path)
-#         tree['dirs'].sort(key=lambda x: len(x['path'].parts), reverse=True) # sort directories by decreasing depth to be able to remove them
-
-#         if len(tree['dirs']) > 0 and not recursive:
-#                 raise FlipperException(f"Directory {path} has subdirectories, use recursive=True to remove them")
-#         if len(tree['files']) > 0 and not remove_contents:
-#             raise FlipperException(f"Directory {path} has files, use remove_contents=True to remove them")
-
-#         for f in tree['files']: # remove files first to allow removing directories
-#             self._flipper.storage.remove(f['path'])
-#         for d in tree['dirs']: 
-#             self._flipper.storage.remove(d['path'])
-
-#         self._flipper.storage.remove(path)
-
-
-#     @strict_typing
-#     def rename(self, path:PureFlipperPath, new_path:PureFlipperPath):
-#         new_path = PureFlipperPath(new_path)
-#         try:
-#             self._flipper.storage.rename(path, new_path)
-#         except FlipperError as e:
-#             if e.args[0].startswith("Storage error: file already exists"):
-#                 raise StoragePathNotFree(f"Path {new_path} already exists")
-#             else:
-#                 raise e
-
