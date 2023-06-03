@@ -33,3 +33,21 @@ def parse_fs_size(value:str) -> int:
     if isinstance(value, str):
         return 0
     return value
+
+
+from logging import Logger, Handler, getLogger
+class Logged:
+    _logger:Logger = None
+    _logger_name:str = __name__ # to be overridden in subclasses
+    @property
+    def logger(self) -> Logger:
+        if self._logger is None:
+            self._logger = getLogger(self._logger_name)
+            self._logger.propagate = False
+        return self._logger
+    
+    def attach_logger_to(self, parent) -> None:
+        if isinstance(parent, Handler):
+            self.logger.addHandler(parent)
+        elif isinstance(parent, Logged):
+            self.logger.addHandler(parent.logger)

@@ -1,16 +1,17 @@
 import re
-from logging import Logger, getLogger
+
 
 from pyflipper.exceptions import SerialException, FlipperError, FlipperTimeout
+from pyflipper.utils import Logged
 
-class SerialWrapper:
+class SerialWrapper(Logged):
     """
     Abstract class for serial communication
 
     Raises:
         NotImplementedError: If class is instantiated directly
     """
-    serial_log:Logger = getLogger("pyflipper.serial")
+    _logger_name = "pyflipper.serial"
 
     def __init__(self):
         raise NotImplementedError("SerialWrapper is an abstract class, use LocalSerial or WSSerial")
@@ -55,22 +56,22 @@ class SerialWrapper:
         """
         payload = f"{payload}\r".encode() # not sending \n because it would be added in case of writing a file
         read_until = read_until.encode()
-        self.serial_log.info(f"Sending: {payload}")
+        self.logger.info(f"Sending: {payload}")
         try:
             received = self._send(payload, read_until)
             error = self._error_check(received)
             if error:
-                self.serial_log.error(error)
+                self.logger.error(error)
                 raise FlipperError(error)
         except SerialException as e:
-            self.serial_log.error(e.args[0])
+            self.logger.error(e.args[0])
             raise e
         else:
             display = repr(received)
             if display.count("\\n") > 1: # display as multiline string if there are multiple \n
                 display = display.replace("\\n", "\\n\n")
                 display = "\n\"\"\"\n{0}\n\"\"\"".format(display[1:-1]) 
-            self.serial_log.debug(f"Received: {display}")
+            self.logger.debug(f"Received: {display}")
         return received
     
     def write(self, msg:bytes):
@@ -85,10 +86,10 @@ class SerialWrapper:
         """
 
         try:
-            self.serial_log.debug(f"Sending binary: {msg}")
+            self.logger.debug(f"Sending binary: {msg}")
             self._write(msg)
         except SerialException as e:
-            self.serial_log.error(e.args[0])
+            self.logger.error(e.args[0])
             raise e
     
     def read(self, length_bytes:int) -> bytes:
@@ -107,14 +108,14 @@ class SerialWrapper:
         """
         if length_bytes <= 0:
             raise ValueError("length_bytes must be positive")
-        self.serial_log.debug(f"Reading {length_bytes} bytes")
+        self.logger.debug(f"Reading {length_bytes} bytes")
         try:
             received = self._read(length_bytes)
         except SerialException as e:
-            self.serial_log.error(e.args[0])
+            self.logger.error(e.args[0])
             raise e
         else:
-            self.serial_log.debug(f"Received: {received}")
+            self.logger.debug(f"Received: {received}")
         return received
     
     def kill_cmd(self):
@@ -124,11 +125,11 @@ class SerialWrapper:
         Raises:
             SerialException: Abstraction for all serial exceptions
         """
-        self.serial_log.debug(f"Sending kill command")
+        self.logger.debug(f"Sending kill command")
         try:
             self._kill_cmd()
         except SerialException as e:
-            self.serial_log.error(e.args[0])
+            self.logger.error(e.args[0])
             raise e
     
     def close(self):
@@ -138,11 +139,11 @@ class SerialWrapper:
         Raises:
             SerialException: Abstraction for all serial exceptions
         """
-        self.serial_log.info(f"Closing serial port")
+        self.logger.info(f"Closing serial port")
         try:
             self._close()
         except SerialException as e:
-            self.serial_log.error(e.args[0])
+            self.logger.error(e.args[0])
             raise e
 
 
@@ -162,14 +163,14 @@ class LocalSerial(SerialWrapper):
 
     def __init__(self, com):
         try:
-            self._serial_port = serial.Serial(port=com, baudrate=9600, bytesize=8, timeout=None, stopbits=serial.STOPBITS_ONE)
+            self._serial_port = serial.Serial(port=com, baudrate=250000, bytesize=8, timeout=None, stopbits=serial.STOPBITS_ONE)
             received = self._serial_port.read_until(b'\r\n>: ').decode() #skip welcome banner
         except serial.serialutil.SerialException:
-            self.serial_log.error(f"Connection to Flipper Zero on {com} failed, check COM port") # logging manually because SerialWrapper is not initialized
+            self.logger.error(f"Connection to Flipper Zero on {com} failed, check COM port") # logging manually because SerialWrapper is not initialized
             raise SerialException(f"Connection to Flipper Zero on {com} failed, check COM port")
         else:
-            self.serial_log.info(f"Connected to Flipper Zero on {com}")
-            self.serial_log.debug("Received: '{}'".format(received))
+            self.logger.info(f"Connected to Flipper Zero on {com}")
+            self.logger.debug("Received: '{}'".format(received))
 
 
     @staticmethod
@@ -237,11 +238,11 @@ class WSSerial(SerialWrapper):
             self._ws = websocket.create_connection(ws)
             received = self._ws.recv() #skip welcome
         except websocket.WebSocketException:
-            self.serial_log.error(f"Connection to Flipper Zero on {ws} failed, check websocket address") # logging manually because SerialWrapper is not initialized
+            self.logger.error(f"Connection to Flipper Zero on {ws} failed, check websocket address") # logging manually because SerialWrapper is not initialized
             raise SerialException(f"Connection to Flipper Zero on {ws} failed, check websocket address")
         else:
-            self.serial_log.info(f"Connected to Flipper Zero on {ws}")
-            self.serial_log.debug("Received: '{}'".format(received))
+            self.logger.info(f"Connected to Flipper Zero on {ws}")
+            self.logger.debug("Received: '{}'".format(received))
     
 
     @staticmethod
