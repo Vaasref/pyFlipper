@@ -57,6 +57,9 @@ class PureFlipperPath(PurePath): # Next step is to implement the non-pure versio
             raise StoragePathInvalid(f'Path {path} must start with "/ext or "/int"')
         return path
 
+    def is_absolute(self):
+        return self.parts[0].rstrip('/') in self._flavour.storages
+
     def is_internal(self):
         return self.parts[0] == '/int'
     
@@ -89,7 +92,7 @@ class FlipperPath(PureFlipperPath):
         self._flipper = flipper
         self._serial_wrapper = flipper._serial_wrapper
         return self
-    
+
     @cached_property
     def parent(self):
         drv, root, parts = self._parse_args(self.parts[:-1])
@@ -116,10 +119,8 @@ class FlipperPath(PureFlipperPath):
             raise StorageException("Flipper instance is required")
         
         path = cls._from_parts(flipper, *args)
-
         if not path.is_absolute():
             raise StoragePathInvalid(f'Path {path} must start with "/ext or "/int"')
-        
         return path
 
     _stat = None
@@ -136,7 +137,7 @@ class FlipperPath(PureFlipperPath):
     @property
     def tree(self):
         if self._tree is None:
-            if self.stat['type'] == 'dir' or self.stat['type'] == 'file': # checking directly to pull full stat if needed
+            if self.stat['type'] == 'dir' or self.stat['type'] == 'storage': # checking directly to pull full stat if needed
                 self._tree = self.stat['tree']
             else:
                 raise StoragePathNotDir(f"Path {self} is not a directory")
@@ -352,7 +353,7 @@ class Storage(SerialFunction):
         raise NotImplementedError("Format is not implemented yet")
 
     def _explorer(self, cmd: str, path: str) -> dict:
-        children_p = re.compile("\[([FD])\]\s(.+)(?:\s(\d+\w+))?\r\n")
+        children_p = re.compile("\[([FD])\]\s([^\s]+)(?:\s(\d+\w+))?\r\n")
         path = PureFlipperPath(path)
         received = self._serial_wrapper.send(f"storage {cmd} {path}")
         children = []
@@ -368,7 +369,6 @@ class Storage(SerialFunction):
                 child['name'] = name
                 child['path'] = PureFlipperPath(path / name) # Fancy way to join paths
             if c[0] == "D":
-                print(c)
                 child['type'] = "dir"
                 dirs.append(child)
             elif c[0] == "F":
@@ -468,13 +468,16 @@ class Storage(SerialFunction):
                 received[1] = received[1].removesuffix(" total")
                 received[2] = received[2].removesuffix(" free")
                 try:
-                    received = {'path': str(path), 'type': 'storage', 'last_edit':timestamp, 'total_size': parse_fs_size(received[1]), 'free_space': parse_fs_size(received[2])}
+                    received = {'path': str(path), 'type': 'storage', 'total_size': parse_fs_size(received[1]), 'free_space': parse_fs_size(received[2])}
                 except ValueError:
                     raise FlipperException(f"Couldn't parse storage {path} stats")
 
                 if extended:
+                    tree = self._explorer('tree', path)
+                    received['tree'] = tree
+
                     timestamp = self._serial_wrapper.send(f"storage timestamp {path}")
-                    received['timestamp'] = int(timestamp.removeprefix("Timestamp ").strip())
+                    received['last_edit'] = int(timestamp.removeprefix("Timestamp ").strip())
 
                     infos = self.info(path)
                     received['label'] = infos['label']
