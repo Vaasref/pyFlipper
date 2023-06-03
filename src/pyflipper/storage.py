@@ -430,7 +430,10 @@ class Storage(SerialFunction):
         self._serial_wrapper.send(f"storage mkdir {new_dir}")
     
     def md5(self, file: str) -> str:
-        return self._serial_wrapper.send(f"storage md5 {file}")
+        received = self._serial_wrapper.send(f"storage md5 {file}").strip()
+        if len(received) != 32 or not received.isalnum():
+            raise FlipperException(f"Couldn't get MD5 checksum for file {file}")
+        return received
 
     def stat(self, path: str, extended:bool=True) -> dict:
         """
@@ -459,7 +462,7 @@ class Storage(SerialFunction):
                     raise FlipperException(f"Couldn't parse file {path} stats")
                 
                 if extended:
-                    received['md5'] = self._serial_wrapper.send(f"storage md5 {path}").strip()
+                    received['md5'] = self.md5(path)
                 
             elif received.startswith("Directory"):
                 received = {'path': str(path), 'type': 'dir'}
