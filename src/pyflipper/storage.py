@@ -236,7 +236,7 @@ class FlipperPath(PureFlipperPath):
             try:
                 stat = self._flipper.storage.stat(self, extended=False)
                 return stat['type']
-            except StorageException:
+            except StorageException as e: # for some reason until I tried to add "as e" it printed the exception instead of passing it
                 pass
         else:
             return self.stat['type']
@@ -278,7 +278,6 @@ class File(SerialFunction):
             path = FlipperPath(self._flipper, path)
         if path.is_not_free():
             if path.is_file():
-                output = {}
                 if check_md5:
                     output = path.stat
                 else:
